@@ -109,7 +109,7 @@ class NasHighResolutionModule(nn.Module):
         self.num_branches = num_branches
 
         self.multi_scale_output = multi_scale_output
-
+        self.coeff = nn.Parameter(torch.ones(self.num_branches if self.multi_scale_output else 1, self.num_branches))
         self.branches = self._make_branches(
             num_branches, blocks, num_blocks, num_channels)
         self.fuse_layers = self._make_fuse_layers()
@@ -206,7 +206,7 @@ class NasHighResolutionModule(nn.Module):
                         )
                     )
                 elif j == i:
-                    fuse_layer.append(None)
+                    fuse_layer.append(nn.Identity())
                 else:
                     conv3x3s = []
                     for k in range(i-j):
@@ -252,13 +252,13 @@ class NasHighResolutionModule(nn.Module):
 
         x_fuse = []
 
+        # use softmax
+        # coeff = nn.functional.softmax(self.coeff, dim=1)
         for i in range(len(self.fuse_layers)):
-            y = x[0] if i == 0 else self.fuse_layers[i][0](x[0])
-            for j in range(1, self.num_branches):
-                if i == j:
-                    y = y + x[j]
-                else:
-                    y = y + self.fuse_layers[i][j](x[j])
+            for j in range(self.num_branches):
+                y = y + self.fuse_layers[i][j](x[j]) * self.coeff[i, j] / self.coeff.sum(dim=1)
+                # use softmax
+                # y = y + self.fuse_layers[i][j](x[j]) * coeff[i, j]
             x_fuse.append(self.relu(y))
 
         return x_fuse
