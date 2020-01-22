@@ -1,0 +1,10 @@
+.models
+.data
+.idea
+.log
+.output
+__pycache__
+cpu_nms.cpython-36m-x86_64-linux-gnu.so
+gpu_nms.cpython-36m-x86_64-linux-gnu.so
+gpu_nms.cpp
+cpu_nms.c

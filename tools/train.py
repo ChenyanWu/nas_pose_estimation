@@ -108,7 +108,7 @@ def main():
     dump_input = torch.rand(
         (1, 3, cfg.MODEL.IMAGE_SIZE[1], cfg.MODEL.IMAGE_SIZE[0])
     )
-    writer_dict['writer'].add_graph(model, (dump_input, ))
+    # writer_dict['writer'].add_graph(model, (dump_input, ))
 
     logger.info(get_model_summary(model, dump_input))
 
@@ -180,7 +180,6 @@ def main():
     )
 
     for epoch in range(begin_epoch, cfg.TRAIN.END_EPOCH):
-        lr_scheduler.step()
 
         # train for one epoch
         train(cfg, train_loader, model, criterion, optimizer, epoch,
@@ -199,6 +198,7 @@ def main():
         else:
             best_model = False
 
+        lr_scheduler.step()
         logger.info('=> saving checkpoint to {}'.format(final_output_dir))
         save_checkpoint({
             'epoch': epoch + 1,
