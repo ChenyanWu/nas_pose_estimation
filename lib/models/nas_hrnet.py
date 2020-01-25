@@ -99,13 +99,14 @@ class Bottleneck(nn.Module):
 
 class NasHighResolutionModule(nn.Module):
     def __init__(self, num_branches, blocks, num_blocks, num_inchannels,
-                 num_channels, fuse_method, multi_scale_output=True):
+                 num_channels, fuse_method, nas_method, multi_scale_output=True):
         super(NasHighResolutionModule, self).__init__()
         self._check_branches(
             num_branches, blocks, num_blocks, num_inchannels, num_channels)
 
         self.num_inchannels = num_inchannels
         self.fuse_method = fuse_method
+        self.nas_method = nas_method
         self.num_branches = num_branches
 
         self.multi_scale_output = multi_scale_output
@@ -252,11 +253,16 @@ class NasHighResolutionModule(nn.Module):
 
         x_fuse = []
 
-        # use softmax
-        # coeff = nn.functional.softmax(self.coeff, dim=1)
-        # use mean
-        mean_coeff = self.coeff.mean(dim=1, keepdim=True)
-        coeff = self.coeff / mean_coeff
+        if self.nas_method == 'mean':
+            mean_coeff = self.coeff.mean(dim=1, keepdim=True)
+            coeff = self.coeff / mean_coeff
+        elif self.nas_method == 'softmax':
+            coeff = nn.functional.softmax(self.coeff, dim=1)
+        elif self.nas_method == 'identity':
+            coeff = self.coeff
+        else:
+            raise ValueError('No nas method')
+
         for i in range(len(self.fuse_layers)):
             y = self.fuse_layers[i][0](x[0]) * coeff[i, 0]
             for j in range(1, self.num_branches):
@@ -280,6 +286,9 @@ class PoseHighResolutionNet(nn.Module):
         extra = cfg.MODEL.EXTRA
         super(PoseHighResolutionNet, self).__init__()
 
+        # the network search method
+        nas_method = cfg.MODEL.NAS_METHOD
+
         # stem net
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1,
                                bias=False)
@@ -298,7 +307,7 @@ class PoseHighResolutionNet(nn.Module):
         ]
         self.transition1 = self._make_transition_layer([256], num_channels)
         self.stage2, pre_stage_channels = self._make_stage(
-            self.stage2_cfg, num_channels)
+            self.stage2_cfg, num_channels, nas_method)
 
         self.stage3_cfg = cfg['MODEL']['EXTRA']['STAGE3']
         num_channels = self.stage3_cfg['NUM_CHANNELS']
@@ -309,7 +318,7 @@ class PoseHighResolutionNet(nn.Module):
         self.transition2 = self._make_transition_layer(
             pre_stage_channels, num_channels)
         self.stage3, pre_stage_channels = self._make_stage(
-            self.stage3_cfg, num_channels)
+            self.stage3_cfg, num_channels, nas_method)
 
         self.stage4_cfg = cfg['MODEL']['EXTRA']['STAGE4']
         num_channels = self.stage4_cfg['NUM_CHANNELS']
@@ -320,7 +329,7 @@ class PoseHighResolutionNet(nn.Module):
         self.transition3 = self._make_transition_layer(
             pre_stage_channels, num_channels)
         self.stage4, pre_stage_channels = self._make_stage(
-            self.stage4_cfg, num_channels, multi_scale_output=False)
+            self.stage4_cfg, num_channels, nas_method, multi_scale_output=False)
 
         self.final_layer = nn.Conv2d(
             in_channels=pre_stage_channels[0],
@@ -331,6 +340,7 @@ class PoseHighResolutionNet(nn.Module):
         )
 
         self.pretrained_layers = cfg['MODEL']['EXTRA']['PRETRAINED_LAYERS']
+
 
     def _make_transition_layer(
             self, num_channels_pre_layer, num_channels_cur_layer):
@@ -392,7 +402,7 @@ class PoseHighResolutionNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def _make_stage(self, layer_config, num_inchannels,
+    def _make_stage(self, layer_config, num_inchannels, nas_method,
                     multi_scale_output=True):
         num_modules = layer_config['NUM_MODULES']
         num_branches = layer_config['NUM_BRANCHES']
@@ -417,6 +427,7 @@ class PoseHighResolutionNet(nn.Module):
                     num_inchannels,
                     num_channels,
                     fuse_method,
+                    nas_method,
                     reset_multi_scale_output
                 )
             )
