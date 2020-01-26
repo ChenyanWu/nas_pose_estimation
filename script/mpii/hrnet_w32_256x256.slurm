@@ -10,6 +10,6 @@ conda activate open-mmlab
 
 set -x
 cd /pylon5/ir5fp5p/chenyan/coding/eccv2020/nas_pose_estimation
-time python tools/train.py --cfg experiments/mpii/hrnet/w32_256x192_adam_lr1e-3.yaml TRAIN.BATCH_SIZE_PER_GPU 64
+time python tools/train.py --cfg experiments/mpii/hrnet/w32_256x256_adam_lr1e-3.yaml TRAIN.BATCH_SIZE_PER_GPU 64
 
 date
