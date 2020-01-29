@@ -145,6 +145,12 @@ def main():
         num_workers=cfg.WORKERS,
         pin_memory=cfg.PIN_MEMORY
     )
+
+    valid_queue = torch.utils.data.DataLoader(
+        train_data, batch_size=args.batch_size,
+        sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[split:num_train]),
+        pin_memory=True, num_workers=2)
+
     valid_loader = torch.utils.data.DataLoader(
         valid_dataset,
         batch_size=cfg.TEST.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
