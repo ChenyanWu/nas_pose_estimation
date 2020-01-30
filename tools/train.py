@@ -138,15 +138,22 @@ def main():
         ])
     )
 
-    train_loader = torch.utils.data.DataLoader(
+    # train_loader = torch.utils.data.DataLoader(
+    #     train_dataset,
+    #     batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
+    #     shuffle=cfg.TRAIN.SHUFFLE,
+    #     num_workers=cfg.WORKERS,
+    #     pin_memory=cfg.PIN_MEMORY
+    # )
+
+    train_queue_in_search = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
         shuffle=cfg.TRAIN.SHUFFLE,
         num_workers=cfg.WORKERS,
-        pin_memory=cfg.PIN_MEMORY
-    )
+        pin_memory=cfg.PIN_MEMORY)
 
-    valid_queue = torch.utils.data.DataLoader(
+    valid_queue_in_search = torch.utils.data.DataLoader(
         train_data, batch_size=args.batch_size,
         sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[split:num_train]),
         pin_memory=True, num_workers=2)
