@@ -20,6 +20,7 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
+import numpy as np
 from tensorboardX import SummaryWriter
 
 import _init_paths
@@ -29,6 +30,7 @@ from core.loss import JointsMSELoss
 from core.function import train
 from core.function import validate
 from utils.utils import get_optimizer
+from utils.utils import get_optimizer_a
 from utils.utils import save_checkpoint
 from utils.utils import create_logger
 from utils.utils import get_model_summary
@@ -138,25 +140,28 @@ def main():
         ])
     )
 
-    # train_loader = torch.utils.data.DataLoader(
-    #     train_dataset,
-    #     batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
-    #     shuffle=cfg.TRAIN.SHUFFLE,
-    #     num_workers=cfg.WORKERS,
-    #     pin_memory=cfg.PIN_MEMORY
-    # )
+    num_train = len(train_dataset)
+    indices = list(range(num_train))
+    # the portion of training can be changed the default is 0.8
+    split = int(np.floor(0.8 * num_train))
 
     train_queue_in_search = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
         shuffle=cfg.TRAIN.SHUFFLE,
         num_workers=cfg.WORKERS,
-        pin_memory=cfg.PIN_MEMORY)
+        pin_memory=cfg.PIN_MEMORY,
+        sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[:split])
+    )
 
     valid_queue_in_search = torch.utils.data.DataLoader(
-        train_data, batch_size=args.batch_size,
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=cfg.TRAIN.SHUFFLE,
+        num_workers=cfg.WORKERS,
+        pin_memory=cfg.PIN_MEMORY,
         sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[split:num_train]),
-        pin_memory=True, num_workers=2)
+    )
 
     valid_loader = torch.utils.data.DataLoader(
         valid_dataset,
@@ -170,6 +175,8 @@ def main():
     best_model = False
     last_epoch = -1
     optimizer = get_optimizer(cfg, model)
+    # need to get the optimizer_a
+    optimizer_a = get_optimizer_a(cfg, model)
     begin_epoch = cfg.TRAIN.BEGIN_EPOCH
     checkpoint_file = os.path.join(
         final_output_dir, 'checkpoint.pth'
@@ -195,7 +202,8 @@ def main():
     for epoch in range(begin_epoch, cfg.TRAIN.END_EPOCH):
 
         # train for one epoch
-        train(cfg, train_loader, model, criterion, optimizer, epoch,
+        # train function need to enhance
+        train(cfg, train_queue_in_search, valid_queue_in_search, model, criterion, optimizer, epoch,
               final_output_dir, tb_log_dir, writer_dict)
 
 

@@ -24,7 +24,7 @@ from utils.vis import save_debug_images
 logger = logging.getLogger(__name__)
 
 
-def train(config, train_loader, model, criterion, optimizer, epoch,
+def train(config, train_queue_in_search, valid_queue_in_search, model, criterion, optimizer, epoch,
           output_dir, tb_log_dir, writer_dict):
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -35,7 +35,7 @@ def train(config, train_loader, model, criterion, optimizer, epoch,
     model.train()
 
     end = time.time()
-    for i, (input, target, target_weight, meta) in enumerate(train_loader):
+    for i, (input, target, target_weight, meta) in enumerate(train_queue_in_search):
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -78,7 +78,7 @@ def train(config, train_loader, model, criterion, optimizer, epoch,
                   'Data {data_time.val:.3f}s ({data_time.avg:.3f}s)\t' \
                   'Loss {loss.val:.5f} ({loss.avg:.5f})\t' \
                   'Accuracy {acc.val:.3f} ({acc.avg:.3f})'.format(
-                      epoch, i, len(train_loader), batch_time=batch_time,
+                      epoch, i, len(train_queue_in_search), batch_time=batch_time,
                       speed=input.size(0)/batch_time.val,
                       data_time=data_time, loss=losses, acc=acc)
             logger.info(msg)

@@ -75,6 +75,23 @@ def get_optimizer(cfg, model):
 
     return optimizer
 
+def get_optimizer_a(cfg, model):
+    optimizer_a = None
+    if cfg.TRAIN.OPTIMIZER == 'sgd':
+        get_optimizer_a = optim.SGD(
+            model.parameters(),
+            lr=cfg.TRAIN.LR,
+            momentum=cfg.TRAIN.MOMENTUM,
+            weight_decay=cfg.TRAIN.WD,
+            nesterov=cfg.TRAIN.NESTEROV
+        )
+    elif cfg.TRAIN.OPTIMIZER == 'adam':
+        get_optimizer_a = optim.Adam(
+            model.parameters(),
+            lr=cfg.TRAIN.LR
+        )
+
+    return get_optimizer_a
 
 def save_checkpoint(states, is_best, output_dir,
                     filename='checkpoint.pth'):
