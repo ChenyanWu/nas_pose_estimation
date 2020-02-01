@@ -2,7 +2,7 @@
 #SBATCH -N 1
 #SBATCH -p GPU-AI
 #SBATCH --gres=gpu:volta16:4
-#SBATCH --output=/pylon5/ir5fp5p/chenyan/coding/eccv2020/nas_pose_estimation/script/log_script/mpii/epoch_300_hrnet_w32_256x192.out
+#SBATCH --output=/pylon5/ir5fp5p/chenyan/coding/eccv2020/nas_pose_estimation/script/log_script/mpii/epoch_150_hrnet_w32_256x192.out
 #SBATCH -t 47:00:00
 date
 source /pylon5/ir5fp5p/chenyan/opt/anaconda3/etc/profile.d/conda.sh
