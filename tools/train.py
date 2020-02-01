@@ -140,25 +140,13 @@ def main():
         ])
     )
 
-    num_train = len(train_dataset)
-    indices = list(range(num_train))
-    # the portion of training can be changed the default is 0.5
-    split = int(np.floor(cfg.DATASET.TRAIN_PORTION * num_train))
 
     train_queue_in_search = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
         num_workers=cfg.WORKERS,
         pin_memory=cfg.PIN_MEMORY,
-        sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[:split])
-    )
-
-    valid_queue_in_search = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
-        num_workers=cfg.WORKERS,
-        pin_memory=cfg.PIN_MEMORY,
-        sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[split:num_train]),
+        shuffle=cfg.TRAIN.SHUFFLE,
     )
 
     valid_loader = torch.utils.data.DataLoader(
@@ -202,7 +190,7 @@ def main():
 
         # train for one epoch
         # train function need to enhance
-        train(cfg, train_queue_in_search, valid_queue_in_search, model, criterion, optimizer, optimizer_a, epoch,
+        train(cfg, train_queue_in_search, model, criterion, optimizer, optimizer_a, epoch,
               final_output_dir, tb_log_dir, writer_dict)
 
 
