@@ -472,6 +472,16 @@ class PoseHighResolutionNet(nn.Module):
 
         return x
 
+    def weight_parameters(self, recurse=True):
+        for name, param in self.named_parameters(recurse=recurse):
+            if "coeff" not in name:
+                yield param
+
+    def arch_parameters(self, recurse=True):
+        for name, param in self.named_parameters(recurse=recurse):
+            if "coeff" in name:
+                yield param
+
     def init_weights(self, pretrained=''):
         logger.info('=> init weights from normal distribution')
         for m in self.modules():
@@ -533,6 +543,8 @@ if __name__ == "__main__":
     model.eval()
     # for idx, m in enumerate(model.named_modules()):
     #     print(m)
+    for param in model.parameters():
+        print(param.size())
     input = torch.rand(1, 3, 256, 192)
     output = model(input)
     print(output.size())

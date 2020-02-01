@@ -24,7 +24,7 @@ from utils.vis import save_debug_images
 logger = logging.getLogger(__name__)
 
 
-def train(config, train_queue_in_search, valid_queue_in_search, model, criterion, optimizer, epoch,
+def train(config, train_queue_in_search, valid_queue_in_search, model, criterion, optimizer, optimizer_a, epoch,
           output_dir, tb_log_dir, writer_dict):
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -39,21 +39,34 @@ def train(config, train_queue_in_search, valid_queue_in_search, model, criterion
         # measure data loading time
         data_time.update(time.time() - end)
 
+        # get the input of the vaild queue in search
+        input_search, target_search, target_weight_search, _ = next(iter(valid_queue_in_search))
+
+        if epoch >= config.TRAIN.BEGIN_SEARCH_EPOCH:
+            target_search = target_search.cuda(non_blocking=True)
+            target_weight_search = target_weight_search.cuda(non_blocking=True)
+            output_search = model(input_search)
+            loss_a = criterion(output_search, target_search, target_weight_search)
+            optimizer_a.zero_grad()
+            loss_a.backward()
+            optimizer_a.step()
+
         # compute output
         outputs = model(input)
 
         target = target.cuda(non_blocking=True)
         target_weight = target_weight.cuda(non_blocking=True)
 
-        if isinstance(outputs, list):
-            loss = criterion(outputs[0], target, target_weight)
-            for output in outputs[1:]:
-                loss += criterion(output, target, target_weight)
-        else:
-            output = outputs
-            loss = criterion(output, target, target_weight)
+        # if isinstance(outputs, list):
+        #     loss = criterion(outputs[0], target, target_weight)
+        #     for output in outputs[1:]:
+        #         loss += criterion(output, target, target_weight)
+        # else:
+        #     output = outputs
+        #     loss = criterion(output, target, target_weight)
 
-        # loss = criterion(output, target, target_weight)
+        output = outputs
+        loss = criterion(output, target, target_weight)
 
         # compute gradient and do update step
         optimizer.zero_grad()

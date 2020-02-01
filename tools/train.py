@@ -142,13 +142,12 @@ def main():
 
     num_train = len(train_dataset)
     indices = list(range(num_train))
-    # the portion of training can be changed the default is 0.8
-    split = int(np.floor(0.8 * num_train))
+    # the portion of training can be changed the default is 0.5
+    split = int(np.floor(cfg.DATASET.TRAIN_PORTION * num_train))
 
     train_queue_in_search = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
-        shuffle=cfg.TRAIN.SHUFFLE,
         num_workers=cfg.WORKERS,
         pin_memory=cfg.PIN_MEMORY,
         sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[:split])
@@ -156,8 +155,7 @@ def main():
 
     valid_queue_in_search = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=args.batch_size,
-        shuffle=cfg.TRAIN.SHUFFLE,
+        batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
         num_workers=cfg.WORKERS,
         pin_memory=cfg.PIN_MEMORY,
         sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[split:num_train]),
@@ -175,8 +173,8 @@ def main():
     best_model = False
     last_epoch = -1
     optimizer = get_optimizer(cfg, model)
-    # need to get the optimizer_a
     optimizer_a = get_optimizer_a(cfg, model)
+
     begin_epoch = cfg.TRAIN.BEGIN_EPOCH
     checkpoint_file = os.path.join(
         final_output_dir, 'checkpoint.pth'
@@ -191,6 +189,7 @@ def main():
         model.load_state_dict(checkpoint['state_dict'])
 
         optimizer.load_state_dict(checkpoint['optimizer'])
+        optimizer_a.load_state_dict(checkpoint['optimizer_a'])
         logger.info("=> loaded checkpoint '{}' (epoch {})".format(
             checkpoint_file, checkpoint['epoch']))
 
@@ -203,7 +202,7 @@ def main():
 
         # train for one epoch
         # train function need to enhance
-        train(cfg, train_queue_in_search, valid_queue_in_search, model, criterion, optimizer, epoch,
+        train(cfg, train_queue_in_search, valid_queue_in_search, model, criterion, optimizer, optimizer_a, epoch,
               final_output_dir, tb_log_dir, writer_dict)
 
 
@@ -228,6 +227,7 @@ def main():
             'best_state_dict': model.module.state_dict(),
             'perf': perf_indicator,
             'optimizer': optimizer.state_dict(),
+            'optimizer_a': optimizer_a.state_dict(),
         }, best_model, final_output_dir)
 
     final_model_state_file = os.path.join(

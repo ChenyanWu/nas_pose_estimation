@@ -62,6 +62,8 @@ _C.DATASET.DATA_FORMAT = 'jpg'
 _C.DATASET.HYBRID_JOINTS_TYPE = ''
 _C.DATASET.SELECT_DATA = False
 
+_C.DATASET.TRAIN_PORTION = 0.5
+
 # training data augmentation
 _C.DATASET.FLIP = True
 _C.DATASET.SCALE_FACTOR = 0.25
@@ -85,8 +87,12 @@ _C.TRAIN.NESTEROV = False
 _C.TRAIN.GAMMA1 = 0.99
 _C.TRAIN.GAMMA2 = 0.0
 
+# the new parameter for the two stage training
 _C.TRAIN.ARCH_LR = 0.006
 _C.TRAIN.ARCH_WD = 0.001
+
+# the epoch for search
+_C.TRAIN.BEGIN_SEARCH_EPOCH = 10
 
 _C.TRAIN.BEGIN_EPOCH = 0
 _C.TRAIN.END_EPOCH = 140
