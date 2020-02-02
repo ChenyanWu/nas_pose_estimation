@@ -39,16 +39,16 @@ def train(config, train_queue_in_search, model, criterion, optimizer, optimizer_
         # measure data loading time
         data_time.update(time.time() - end)
 
-        if epoch >= config.TRAIN.BEGIN_SEARCH_EPOCH and i%2 == 0:
-            # output_search = model(input)
-            # target_search = target.cuda(non_blocking=True)
-            # target_weight_search = target_weight.cuda(non_blocking=True)
-            #
-            # loss_a = criterion(output_search, target_search, target_weight_search)
-            # optimizer_a.zero_grad()
-            # loss_a.backward()
-            # optimizer_a.step()
-            pass
+        if epoch >= config.TRAIN.BEGIN_SEARCH_EPOCH and i%2 == 1:
+        # if i % 2 == 1:
+            output_search = model(input)
+            target_search = target.cuda(non_blocking=True)
+            target_weight_search = target_weight.cuda(non_blocking=True)
+
+            loss_a = criterion(output_search, target_search, target_weight_search)
+            optimizer_a.zero_grad()
+            loss_a.backward()
+            optimizer_a.step()
         else:
             # compute output
             outputs = model(input)
