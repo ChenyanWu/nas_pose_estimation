@@ -39,8 +39,9 @@ def train(config, train_queue_in_search, model, criterion, optimizer, optimizer_
         # measure data loading time
         data_time.update(time.time() - end)
 
-        if epoch >= config.TRAIN.BEGIN_SEARCH_EPOCH and i%2 == 1:
+        if not config.TRAIN.USE_SEARCHED_COEFF and epoch >= config.TRAIN.BEGIN_SEARCH_EPOCH and i%2 == 0:
         # if i % 2 == 1:
+            # update coeff
             output_search = model(input)
             target_search = target.cuda(non_blocking=True)
             target_weight_search = target_weight.cuda(non_blocking=True)
@@ -83,7 +84,7 @@ def train(config, train_queue_in_search, model, criterion, optimizer, optimizer_
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % config.PRINT_FREQ == 0:
+        if i % config.PRINT_FREQ == 1:
             msg = 'Epoch: [{0}][{1}/{2}]\t' \
                   'Time {batch_time.val:.3f}s ({batch_time.avg:.3f}s)\t' \
                   'Speed {speed:.1f} samples/s\t' \
@@ -94,7 +95,16 @@ def train(config, train_queue_in_search, model, criterion, optimizer, optimizer_
                       speed=input.size(0)/batch_time.val,
                       data_time=data_time, loss=losses, acc=acc)
             logger.info(msg)
-
+            # to debug
+            check_model = model.module.state_dict()
+            flag = 0
+            for name_para in check_model:
+                if 'coeff' in name_para:
+                    flag = 1
+            if flag != 1:
+                raise ValueError('shit! do not save!')
+            else:
+                logger.info('ok')
             writer = writer_dict['writer']
             global_steps = writer_dict['train_global_steps']
             writer.add_scalar('train_loss', losses.val, global_steps)

@@ -94,6 +94,14 @@ def main():
         cfg, is_train=True
     )
 
+    # if use searched coeff, load the coeff
+    if cfg.TRAIN.USE_SEARCHED_COEFF:
+        if cfg.TRAIN.COEFF_PATH:
+            coeff_search_model = torch.load(cfg.TRAIN.COEFF_PATH)
+            model.load_state_dict(coeff_search_model, strict=False)
+        else:
+            logger.error('No exsiting coeff')
+
     # copy model file
     this_dir = os.path.dirname(__file__)
     shutil.copy2(
@@ -225,6 +233,15 @@ def main():
         final_model_state_file)
     )
     torch.save(model.module.state_dict(), final_model_state_file)
+    # save the coeff
+    if 'nas' in cfg.MODEL.NAME:
+        best_model_path = os.path.join(final_output_dir, 'model_best.pth')
+        searched_model = torch.load(best_model_path)
+        dict_coeff = {}
+        for name in searched_model:
+            if 'coeff' in name:
+                dict_coeff[name] = searched_model[name]
+        torch.save(dict_coeff, os.path.join(final_output_dir, 'coeff.pth'))
     writer_dict['writer'].close()
 
 
