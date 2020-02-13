@@ -40,7 +40,12 @@ def train(config, train_queue_in_search, valid_queue_in_search, model, criterion
         data_time.update(time.time() - end)
 
         # get the input of the vaild queue in search
-        input_search, target_search, target_weight_search, _ = next(iter(valid_queue_in_search))
+        # input_search, target_search, target_weight_search, _ = next(iter(valid_queue_in_search))
+        try:
+            input_search, target_search = next(valid_queue_iter)
+        except:
+            valid_queue_iter = iter(valid_queue_in_search)
+            input_search, target_search = next(valid_queue_iter)
 
         if epoch >= config.TRAIN.BEGIN_SEARCH_EPOCH:
             target_search = target_search.cuda(non_blocking=True)
