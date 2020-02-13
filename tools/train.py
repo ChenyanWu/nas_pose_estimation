@@ -241,6 +241,8 @@ def main():
         for name in searched_model:
             if 'coeff' in name:
                 dict_coeff[name] = searched_model[name]
+                logger.info(name)
+                logger.info(np.array2string(searched_model[name].detach().cpu().numpy()))
         torch.save(dict_coeff, os.path.join(final_output_dir, 'coeff.pth'))
     writer_dict['writer'].close()
 

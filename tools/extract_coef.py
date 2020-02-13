@@ -7,6 +7,7 @@ import os
 import pprint
 import logging
 from pathlib import Path
+import numpy as np
 
 import torch
 import torch.nn.parallel
@@ -92,10 +93,20 @@ def main():
             dict_coeff[name] = searched_model[name]
     torch.save(dict_coeff, os.path.join(model_dir, 'coeff.pth'))
     coeff_search_model = torch.load(os.path.join(model_dir, 'coeff.pth'))
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    console = logging.StreamHandler()
+    logging.getLogger('').addHandler(console)
     model.load_state_dict(coeff_search_model, strict=False)
     for name, param in model.named_parameters():
         if "coeff" in name:
-            print(name, param)
+            logger.info(name)
+            logger.info(np.array2string(param.detach().cpu().numpy()))
+    for name in coeff_search_model:
+        if 'coeff' in name:
+            dict_coeff[name] = coeff_search_model[name]
+            logger.info(name)
+            logger.info(np.array2string(coeff_search_model[name].detach().cpu().numpy()))
     print('ok')
 
 

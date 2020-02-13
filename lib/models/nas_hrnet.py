@@ -260,6 +260,10 @@ class NasHighResolutionModule(nn.Module):
             coeff = nn.functional.softmax(self.coeff, dim=1)
         elif self.nas_method == 'identity':
             coeff = self.coeff
+        elif self.nas_method == 'relu_mean':
+            relu_coeff = torch.relu(self.coeff)
+            mean_coeff = relu_coeff.mean(dim=1, keepdim=True)
+            coeff = relu_coeff / (mean_coeff + 0.0001)
         else:
             raise ValueError('No nas method')
 
