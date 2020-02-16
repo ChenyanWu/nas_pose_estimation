@@ -98,6 +98,7 @@ def main():
     if cfg.TRAIN.USE_SEARCHED_COEFF:
         if cfg.TRAIN.COEFF_PATH:
             coeff_search_model = torch.load(cfg.TRAIN.COEFF_PATH)
+            logger.info('=> loading searched model {}'.format(cfg.TRAIN.COEFF_PATH))
             model.load_state_dict(coeff_search_model, strict=False)
         else:
             logger.error('No exsiting coeff')

@@ -49,6 +49,7 @@ def train(config, train_queue_in_search, model, criterion, optimizer, optimizer_
             loss_a = criterion(output_search, target_search, target_weight_search)
             optimizer_a.zero_grad()
             loss_a.backward()
+            # torch.nn.utils.clip_grad_norm_(model.module.arch_parameters(), 5)
             optimizer_a.step()
         else:
             # compute output
@@ -71,6 +72,7 @@ def train(config, train_queue_in_search, model, criterion, optimizer, optimizer_
             # compute gradient and do update step
             optimizer.zero_grad()
             loss.backward()
+            # torch.nn.utils.clip_grad_norm_(model.module.weight_parameters(), 5)
             optimizer.step()
 
             # measure accuracy and record loss
@@ -95,16 +97,16 @@ def train(config, train_queue_in_search, model, criterion, optimizer, optimizer_
                       speed=input.size(0)/batch_time.val,
                       data_time=data_time, loss=losses, acc=acc)
             logger.info(msg)
-            # to debug
-            check_model = model.module.state_dict()
-            flag = 0
-            for name_para in check_model:
-                if 'coeff' in name_para:
-                    flag = 1
-            if flag != 1:
-                raise ValueError('shit! do not save!')
-            else:
-                logger.info('ok')
+            # to debug whether save coeff
+            # check_model = model.module.state_dict()
+            # flag = 0
+            # for name_para in check_model:
+            #     if 'coeff' in name_para:
+            #         flag = 1
+            # if flag != 1:
+            #     raise ValueError('shit! do not save!')
+            # else:
+            #     logger.info('ok')
             writer = writer_dict['writer']
             global_steps = writer_dict['train_global_steps']
             writer.add_scalar('train_loss', losses.val, global_steps)

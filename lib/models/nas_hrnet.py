@@ -111,6 +111,8 @@ class NasHighResolutionModule(nn.Module):
 
         self.multi_scale_output = multi_scale_output
         self.coeff = nn.Parameter(torch.ones(self.num_branches if self.multi_scale_output else 1, self.num_branches))
+        # self.coeff = nn.Parameter(1e-3*torch.randn(self.num_branches if self.multi_scale_output else 1, self.num_branches))
+        # self.coeff = nn.Parameter(torch.zeros(self.num_branches if self.multi_scale_output else 1, self.num_branches))
         self.branches = self._make_branches(
             num_branches, blocks, num_blocks, num_channels)
         self.fuse_layers = self._make_fuse_layers()
