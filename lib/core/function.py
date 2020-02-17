@@ -39,7 +39,7 @@ def train(config, train_queue_in_search, model, criterion, optimizer, optimizer_
         # measure data loading time
         data_time.update(time.time() - end)
 
-        if not config.TRAIN.USE_SEARCHED_COEFF and epoch >= config.TRAIN.BEGIN_SEARCH_EPOCH and i%2 == 0:
+        if not config.TRAIN.USE_SEARCHED_COEFF and epoch >= config.TRAIN.BEGIN_SEARCH_EPOCH and i%5 == 0:
         # if i % 2 == 1:
             # update coeff
             output_search = model(input)

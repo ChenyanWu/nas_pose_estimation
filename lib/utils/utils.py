@@ -78,8 +78,8 @@ def get_optimizer(cfg, model):
 def get_optimizer_a(cfg, model):
     optimizer_a = optim.Adam(model.module.arch_parameters(),
                                  lr=cfg.TRAIN.ARCH_LR,
-                                 betas=(0.5, 0.999),
-                                 # weight_decay=cfg.TRAIN.ARCH_WD,
+                                 # betas=(0.5, 0.999),
+                                 weight_decay=cfg.TRAIN.ARCH_WD,
                                  )
     return optimizer_a
 
