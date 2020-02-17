@@ -202,12 +202,24 @@ class NasHighResolutionModule(nn.Module):
                                 num_inchannels[i],
                                 1, 1, 0, bias=False
                             ),
+                            # nn.Upsample(scale_factor=2 ** (j - i), mode='nearest'),
+                            # nn.BatchNorm2d(num_inchannels[i]),
                             nn.BatchNorm2d(num_inchannels[i]),
-                            nn.Upsample(scale_factor=2**(j-i), mode='nearest')
+                            nn.Upsample(scale_factor=2 ** (j - i), mode='nearest')
                         )
                     )
                 elif j == i:
-                    fuse_layer.append(nn.Identity())
+                    # fuse_layer.append(nn.BatchNorm2d(num_inchannels[i]))
+                    fuse_layer.append(
+                        nn.Sequential(
+                            nn.Conv2d(
+                                num_inchannels[j],
+                                num_inchannels[i],
+                                1, 1, 0, bias=False
+                            ),
+                            nn.BatchNorm2d(num_inchannels[i]),
+                        )
+                    )
                 else:
                     conv3x3s = []
                     for k in range(i-j):
