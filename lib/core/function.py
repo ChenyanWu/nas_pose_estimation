@@ -49,7 +49,7 @@ def train(config, train_queue_in_search, model, criterion, optimizer, optimizer_
             loss_a = criterion(output_search, target_search, target_weight_search)
             optimizer_a.zero_grad()
             loss_a.backward()
-            # torch.nn.utils.clip_grad_norm_(model.module.arch_parameters(), 5)
+            torch.nn.utils.clip_grad_norm_(model.module.arch_parameters(), 5)
             optimizer_a.step()
         else:
             # compute output
