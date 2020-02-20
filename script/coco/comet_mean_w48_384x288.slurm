@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p gpu
-#SBATCH --gres=gpu:k80:4
+#SBATCH --gres=gpu:p100:4
 #SBATCH --ntasks-per-node=24
 #SBATCH --output=/home/chenyan/coding/nas_pose_estimation/script/log_script/coco/mean_w48_384x288_adam_lr1e-3.out
 #SBATCH -t 47:00:00
