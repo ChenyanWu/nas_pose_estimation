@@ -11,7 +11,17 @@ source /home/chenyan/anaconda3/etc/profile.d/conda.sh
 conda activate py37
 
 set -x
+cd /scratch/chenyan
+cd $(ls -d */|head -n 1)
+cp -r /oasis/scratch/comet/chenyan/temp_project/coco ./
+cd coco/images
+unzip train2017.zip
+unzip val2017.zip
+unzip test2017.zip
+echo done coco dataset
+cd ../..
+coco_path=$(pwd)/coco/
 cd /home/chenyan/coding/nas_pose_estimation
-time python tools/train.py --cfg experiments/coco/nas_hrnet/mean_w48_256x192_adam_lr1e-3.yaml
+time python tools/train.py --cfg experiments/coco/nas_hrnet/mean_w48_256x192_adam_lr1e-3.yaml DATASET.ROOT $coco_path
 
 date
