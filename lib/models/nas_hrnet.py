@@ -24,6 +24,22 @@ def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
 
+class SELayer(nn.Module):
+    def __init__(self, channel, reduction=4):
+        super(SELayer, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel // reduction, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel // reduction, channel, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+        return x * y.expand_as(x)
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -205,6 +221,8 @@ class NasHighResolutionModule(nn.Module):
                             # nn.Upsample(scale_factor=2 ** (j - i), mode='nearest'),
                             # nn.BatchNorm2d(num_inchannels[i]),
                             nn.BatchNorm2d(num_inchannels[i]),
+                            # add SE layer
+                            SELayer(num_inchannels[i]),
                             nn.Upsample(scale_factor=2 ** (j - i), mode='nearest')
                         )
                     )
@@ -212,14 +230,21 @@ class NasHighResolutionModule(nn.Module):
                     # fuse_layer.append(nn.BatchNorm2d(num_inchannels[i]))
                     fuse_layer.append(
                         nn.Sequential(
-                            nn.Conv2d(
-                                num_inchannels[j],
-                                num_inchannels[i],
-                                1, 1, 0, bias=False
-                            ),
                             nn.BatchNorm2d(num_inchannels[i]),
+                            # add SE layer
+                            SELayer(num_inchannels[i]),
                         )
                     )
+                    # fuse_layer.append(
+                    #     nn.Sequential(
+                    #         nn.Conv2d(
+                    #             num_inchannels[j],
+                    #             num_inchannels[i],
+                    #             1, 1, 0, bias=False
+                    #         ),
+                    #         nn.BatchNorm2d(num_inchannels[i]),
+                    #     )
+                    # )
                 else:
                     conv3x3s = []
                     for k in range(i-j):
@@ -232,7 +257,9 @@ class NasHighResolutionModule(nn.Module):
                                         num_outchannels_conv3x3,
                                         3, 2, 1, bias=False
                                     ),
-                                    nn.BatchNorm2d(num_outchannels_conv3x3)
+                                    nn.BatchNorm2d(num_outchannels_conv3x3),
+                                    # add SE layer
+                                    SELayer(num_inchannels[i]),
                                 )
                             )
                         else:
