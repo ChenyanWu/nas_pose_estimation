@@ -25,7 +25,7 @@ def conv3x3(in_planes, out_planes, stride=1):
                      padding=1, bias=False)
 
 class SELayer(nn.Module):
-    def __init__(self, channel, reduction=4):
+    def __init__(self, channel, reduction=16):
         super(SELayer, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
@@ -130,6 +130,7 @@ class NasHighResolutionModule(nn.Module):
         self.branches = self._make_branches(
             num_branches, blocks, num_blocks, num_channels)
         self.fuse_layers = self._make_fuse_layers()
+        self.se_reduce_layers = self._make_se_reduce_layers()
         self.relu = nn.ReLU(True)
 
     def _check_branches(self, num_branches, blocks, num_blocks,
@@ -221,20 +222,20 @@ class NasHighResolutionModule(nn.Module):
                             # nn.Upsample(scale_factor=2 ** (j - i), mode='nearest'),
                             # nn.BatchNorm2d(num_inchannels[i]),
                             nn.BatchNorm2d(num_inchannels[i]),
-                            # add SE layer
-                            SELayer(num_inchannels[i]),
+                            # # add SE layer
+                            # SELayer(num_inchannels[i]),
                             nn.Upsample(scale_factor=2 ** (j - i), mode='nearest')
                         )
                     )
                 elif j == i:
-                    # fuse_layer.append(nn.BatchNorm2d(num_inchannels[i]))
-                    fuse_layer.append(
-                        nn.Sequential(
-                            nn.BatchNorm2d(num_inchannels[i]),
-                            # add SE layer
-                            SELayer(num_inchannels[i]),
-                        )
-                    )
+                    fuse_layer.append(nn.BatchNorm2d(num_inchannels[i]))
+                    # fuse_layer.append(
+                    #     nn.Sequential(
+                    #         nn.BatchNorm2d(num_inchannels[i]),
+                    #         # add SE layer
+                    #         SELayer(num_inchannels[i]),
+                    #     )
+                    # )
                     # fuse_layer.append(
                     #     nn.Sequential(
                     #         nn.Conv2d(
@@ -259,7 +260,7 @@ class NasHighResolutionModule(nn.Module):
                                     ),
                                     nn.BatchNorm2d(num_outchannels_conv3x3),
                                     # add SE layer
-                                    SELayer(num_inchannels[i]),
+                                    # SELayer(num_inchannels[i]),
                                 )
                             )
                         else:
@@ -280,6 +281,26 @@ class NasHighResolutionModule(nn.Module):
 
         return nn.ModuleList(fuse_layers)
 
+    def _make_se_reduce_layers(self):
+        if self.num_branches == 1:
+            return None
+
+        num_branches = self.num_branches
+        num_inchannels = self.num_inchannels
+        se_reduce_layers = []
+        for i in range(num_branches if self.multi_scale_output else 1):
+            se_reduce_layers.append(
+                nn.Sequential(
+                    SELayer(num_branches * num_inchannels[i]),
+                    nn.Conv2d(
+                        num_branches * num_inchannels[i],
+                        num_inchannels[i],
+                        1, 1, 0, bias=False
+                    )
+                )
+            )
+        return nn.ModuleList(se_reduce_layers)
+
     def get_num_inchannels(self):
         return self.num_inchannels
 
@@ -292,24 +313,28 @@ class NasHighResolutionModule(nn.Module):
 
         x_fuse = []
 
-        if self.nas_method == 'mean':
-            mean_coeff = self.coeff.mean(dim=1, keepdim=True)
-            coeff = self.coeff / mean_coeff
-        elif self.nas_method == 'softmax':
-            coeff = nn.functional.softmax(self.coeff, dim=1)
-        elif self.nas_method == 'identity':
-            coeff = self.coeff
-        else:
-            raise ValueError('No nas method')
+        # if self.nas_method == 'mean':
+        #     mean_coeff = self.coeff.mean(dim=1, keepdim=True)
+        #     coeff = self.coeff / mean_coeff
+        # elif self.nas_method == 'softmax':
+        #     coeff = nn.functional.softmax(self.coeff, dim=1)
+        # elif self.nas_method == 'identity':
+        #     coeff = self.coeff
+        # else:
+        #     raise ValueError('No nas method')
 
         for i in range(len(self.fuse_layers)):
-            y = self.fuse_layers[i][0](x[0]) * coeff[i, 0]
-            for j in range(1, self.num_branches):
-                y = y + self.fuse_layers[i][j](x[j]) * coeff[i, j]
-                # use softmax
-                # y = y + self.fuse_layers[i][j](x[j]) * coeff[i, j]
-            x_fuse.append(self.relu(y))
-
+            # y = self.fuse_layers[i][0](x[0]) * coeff[i, 0]
+            # for j in range(1, self.num_branches):
+            #     y = y + self.fuse_layers[i][j](x[j]) * coeff[i, j]
+            #     # use softmax
+            #     # y = y + self.fuse_layers[i][j](x[j]) * coeff[i, j]
+            # x_fuse.append(self.relu(y))
+            concat_list = []
+            for j in range(self.num_branches):
+                concat_list.append(self.fuse_layers[i][j](x[j]))
+            concat_x = torch.cat(concat_list, 1)
+            x_fuse.append(self.se_reduce_layers[i](concat_x))
         return x_fuse
 
 blocks_dict = {
