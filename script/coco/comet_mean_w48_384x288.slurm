@@ -2,7 +2,7 @@
 #SBATCH -p gpu
 #SBATCH --gres=gpu:p100:4
 #SBATCH --ntasks-per-node=24
-#SBATCH --output=/home/chenyan/coding/nas_pose_estimation/script/log_script/coco/resume_mean_w48_384x288_adam_lr1e-3.out
+#SBATCH --output=/home/chenyan/coding/nas_pose_estimation/script/log_script/coco/double_resume_mean_w48_384x288_adam_lr1e-3.out
 #SBATCH -t 47:00:00
 module purge
 module load cuda
