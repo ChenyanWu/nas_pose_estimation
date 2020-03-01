@@ -600,3 +600,4 @@ if __name__ == "__main__":
     input = torch.rand(1, 3, 256, 192)
     output = model(input)
     print(output.size())
+    # chenyan
