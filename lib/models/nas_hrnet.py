@@ -269,6 +269,19 @@ class NasHighResolutionModule(nn.Module):
         else:
             raise ValueError('No nas method')
 
+        # if self.multi_scale_output:
+        #     for i in range(len(self.fuse_layers)):
+        #         y = self.fuse_layers[i][0](x[0]) * coeff[i, 0]
+        #         for j in range(1, self.num_branches):
+        #             y = y + self.fuse_layers[i][j](x[j]) * coeff[i, j]
+        #             # use softmax
+        #             # y = y + self.fuse_layers[i][j](x[j]) * coeff[i, j]
+        #         x_fuse.append(self.relu(y))
+        # else:
+        #     y = self.fuse_layers[0][0](x[0]) * coeff[0, 0] + self.fuse_layers[0][1](x[1]) * coeff[0, 1]  + self.fuse_layers[0][2](x[2]) * coeff[0, 2]  + self.fuse_layers[0][3](x[3]) * coeff[0, 3]
+        #     # y = self.fuse_layers[0][3](x[3]) * coeff[0, 3]
+        #     x_fuse.append(self.relu(y))
+
         for i in range(len(self.fuse_layers)):
             y = self.fuse_layers[i][0](x[0]) * coeff[i, 0]
             for j in range(1, self.num_branches):
@@ -276,7 +289,6 @@ class NasHighResolutionModule(nn.Module):
                 # use softmax
                 # y = y + self.fuse_layers[i][j](x[j]) * coeff[i, j]
             x_fuse.append(self.relu(y))
-
         return x_fuse
 
 blocks_dict = {

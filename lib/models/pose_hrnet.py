@@ -184,6 +184,7 @@ class HighResolutionModule(nn.Module):
 
         return nn.ModuleList(branches)
 
+
     def _make_fuse_layers(self):
         if self.num_branches == 1:
             return None
@@ -252,6 +253,23 @@ class HighResolutionModule(nn.Module):
             x[i] = self.branches[i](x[i])
 
         x_fuse = []
+
+        # if self.multi_scale_output:
+        #     for i in range(len(self.fuse_layers)):
+        #         y = x[0] if i == 0 else self.fuse_layers[i][0](x[0])
+        #         for j in range(1, self.num_branches):
+        #             if i == j:
+        #                 y = y + x[j]
+        #             else:
+        #                 y = y + self.fuse_layers[i][j](x[j])
+        #         x_fuse.append(self.relu(y))
+        # else:
+        #     # y = x[0]
+        #     # y = self.fuse_layers[0][1](x[1])
+        #     # y = self.fuse_layers[0][2](x[2])
+        #     # y = self.fuse_layers[0][3](x[3])
+        #     y = x[0] + self.fuse_layers[0][1](x[1]) + self.fuse_layers[0][2](x[2]) + self.fuse_layers[0][3](x[3])
+        #     x_fuse.append(self.relu(y))
 
         for i in range(len(self.fuse_layers)):
             y = x[0] if i == 0 else self.fuse_layers[i][0](x[0])
