@@ -292,11 +292,11 @@ class NasHighResolutionModule(nn.Module):
             se_reduce_layers.append(
                 nn.Sequential(
                     SELayer(num_branches * num_inchannels[i]),
-                    nn.Conv2d(
-                        num_branches * num_inchannels[i],
-                        num_inchannels[i],
-                        1, 1, 0, bias=False
-                    )
+                    # nn.Conv2d(
+                    #     num_branches * num_inchannels[i],
+                    #     num_inchannels[i],
+                    #     1, 1, 0, bias=False
+                    # )
                 )
             )
         return nn.ModuleList(se_reduce_layers)
@@ -334,7 +334,11 @@ class NasHighResolutionModule(nn.Module):
             for j in range(self.num_branches):
                 concat_list.append(self.fuse_layers[i][j](x[j]))
             concat_x = torch.cat(concat_list, 1)
-            x_fuse.append(self.se_reduce_layers[i](concat_x))
+            x_se = self.se_reduce_layers[i](concat_x)
+            concat_x_se = x_se[:,:self.num_inchannels[i]]
+            for j in range(1, self.num_branches):
+                concat_x_se += x_se[:, j * self.num_inchannels[i] : (j+1) * self.num_inchannels[i]]
+            x_fuse.append(concat_x_se)
         return x_fuse
 
 blocks_dict = {
@@ -548,6 +552,11 @@ class PoseHighResolutionNet(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, std=0.001)
+                for name, _ in m.named_parameters():
+                    if name in ['bias']:
+                        nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.ConvTranspose2d):
                 nn.init.normal_(m.weight, std=0.001)
                 for name, _ in m.named_parameters():

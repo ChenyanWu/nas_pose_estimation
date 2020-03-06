@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p gpu
 #SBATCH --gres=gpu:p100:4
-#SBATCH --ntasks-per-node=24
+#SBATCH --ntasks-per-node=28
 #SBATCH --output=/home/chenyan/coding/nas_pose_estimation/script/log_script/coco/without_pretrain_hrnet_w32_256x192_adam_lr1e-3.out
 #SBATCH -t 47:00:00
 module purge
