@@ -199,6 +199,7 @@ def main():
             best_model = False
 
         lr_scheduler.step()
+        logger.info('best_model{}'.format(best_perf))
         logger.info('=> saving checkpoint to {}'.format(final_output_dir))
         save_checkpoint({
             'epoch': epoch + 1,

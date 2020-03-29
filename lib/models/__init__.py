@@ -15,3 +15,4 @@ from __future__ import print_function
 import models.pose_resnet
 import models.pose_hrnet
 import models.nas_hrnet
+import models.covariance_hrnet
