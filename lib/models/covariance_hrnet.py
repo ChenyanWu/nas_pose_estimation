@@ -63,7 +63,7 @@ class ChannelAvgPool(nn.Module):
         self.reduction = reduction
     def forward(self, input):
         n, c, h, w = input.size()
-        input = input.view(n,c,h*w).permute(0,2,1)
+        input = input.view(n,c,h*w).permute(0,2,1).contiguous()
         assert c % self.reduction == 0
         input =  self.avg_pool(input)
         _, _, c = input.size()
@@ -103,6 +103,77 @@ class COVARLayer(nn.Module):
         covar_x_instance = torch.bmm(x_instance, x_instance.transpose(1, 2)).div(H * W)
         coef = self.fc(covar_x_instance.view(N, -1)).view(N, C, 1, 1)
         return x * coef.expand_as(x)
+
+class COVARLayer_1(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(COVARLayer_1, self).__init__()
+        self.reduction = reduction
+        self.channelpool = ChannelAvgPool(reduction)
+        assert channel % reduction == 0
+        self.fc = nn.Sequential(
+            nn.Linear(channel * channel // reduction // reduction, channel * channel // reduction // reduction, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel * channel // reduction // reduction, channel * channel // reduction // reduction, bias=False),
+            nn.Sigmoid()
+        )
+    def forward(self, x):
+        N, C, H, W = x.size()
+        x_reduce = self.channelpool(x)
+
+        # compute the batch covariance
+        # x_batch = x_reduce.transpose(0, 1).contiguous()
+        # # C//reduction x (N x H x W)
+        # x_batch = x_batch.view(C//self.reduction, -1)
+        # avg_x_batch = x_batch.mean(-1, keepdim=True)
+        # x_batch = x_batch - avg_x_batch
+        # # C//reduction x C//reduction
+        # covar_x_batch = torch.mm(x_batch, x_batch.transpose(0, 1)).div(N * H * W)
+
+        # compute the instance covariance
+        x_instance = x_reduce.view(N, C//self.reduction, -1)
+        avg_x_instance = x_instance.mean(-1, keepdim=True)
+        x_instance = x_instance - avg_x_instance
+        # N x C//self.reduction x C//self.reduction
+        covar_x_instance = torch.bmm(x_instance, x_instance.transpose(1, 2)).div(H * W)
+        coef = self.fc(covar_x_instance.view(N, -1)).view(N, C//self.reduction, C//self.reduction)
+        x_matix = torch.bmm(coef, x.view(N, C//self.reduction, -1))
+        return x_matix.view(N, C, H, W)
+
+class COVARLayer_2(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(COVARLayer_2, self).__init__()
+        self.reduction = reduction
+        self.channelpool = ChannelAvgPool(reduction)
+        assert channel % reduction == 0
+        self.fc = nn.Sequential(
+            nn.Linear(channel * channel // reduction // reduction, channel * channel // reduction // reduction, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel * channel // reduction // reduction, channel * channel // reduction // reduction, bias=False),
+            nn.Sigmoid()
+        )
+    def forward(self, x):
+        N, C, H, W = x.size()
+        x_reduce = self.channelpool(x)
+
+        # compute the batch covariance
+        # x_batch = x_reduce.transpose(0, 1).contiguous()
+        # # C//reduction x (N x H x W)
+        # x_batch = x_batch.view(C//self.reduction, -1)
+        # avg_x_batch = x_batch.mean(-1, keepdim=True)
+        # x_batch = x_batch - avg_x_batch
+        # # C//reduction x C//reduction
+        # covar_x_batch = torch.mm(x_batch, x_batch.transpose(0, 1)).div(N * H * W)
+
+        # compute the instance covariance
+        x_instance = x_reduce.view(N, C//self.reduction, -1)
+        avg_x_instance = x_instance.mean(-1, keepdim=True)
+        x_instance = x_instance - avg_x_instance
+        # N x C//self.reduction x C//self.reduction
+        covar_x_instance = torch.bmm(x_instance, x_instance.transpose(1, 2)).div(H * W)
+        coef = self.fc(covar_x_instance.view(N, -1)).view(N, C//self.reduction, C//self.reduction)
+        coef = torch.inverse(coef)
+        x_matix = torch.bmm(coef, x.view(N, C//self.reduction, -1))
+        return x_matix.view(N, C, H, W)
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -348,7 +419,7 @@ class NasHighResolutionModule(nn.Module):
         for i in range(num_branches if self.multi_scale_output else 1):
             covar_layers.append(
                 nn.Sequential(
-                    COVARLayer(num_branches * num_inchannels[i]),
+                    COVARLayer_1(num_branches * num_inchannels[i]),
                 )
             )
         return nn.ModuleList(covar_layers)
@@ -588,11 +659,11 @@ class PoseHighResolutionNet(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, std=0.001)
-                for name, _ in m.named_parameters():
-                    if name in ['bias']:
-                        nn.init.constant_(m.bias, 0)
+            # elif isinstance(m, nn.Linear):
+            #     nn.init.normal_(m.weight, std=0.001)
+            #     for name, _ in m.named_parameters():
+            #         if name in ['bias']:
+            #             nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.ConvTranspose2d):
                 nn.init.normal_(m.weight, std=0.001)
                 for name, _ in m.named_parameters():
