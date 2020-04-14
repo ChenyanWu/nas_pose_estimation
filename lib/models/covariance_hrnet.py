@@ -167,6 +167,42 @@ class CE_2(nn.Module):
         x_weight = torch.sigmoid(self.x_weight)
         return x_weight * x_matix + (1 - x_weight) * xin
 
+class CE_3(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(CE_3, self).__init__()
+        self.reduction = reduction
+        self.channelpool = ChannelAvgPool(reduction)
+        assert channel % reduction == 0
+        self.fc = nn.Sequential(
+            nn.Linear(channel * channel // reduction // reduction, channel // reduction, bias=False),
+            nn.LayerNorm([channel // reduction]),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel // reduction, channel, bias=False),
+            nn.Sigmoid()
+        )
+
+        self.AR = AdaptiveReweight(channel)
+
+        self.x_weight = nn.Parameter(torch.zeros(1))
+
+
+    def forward(self, X):
+        xin = self.AR(X)
+
+        N, C, H, W = X.size()
+        x_reduce = self.channelpool(X)
+        x_instance = x_reduce.view(N, C // self.reduction, -1)
+        avg_x_instance = x_instance.mean(-1, keepdim=True)
+        x_instance = x_instance - avg_x_instance
+        # N x C//self.reduction x C//self.reduction
+        covar_x_instance = torch.bmm(x_instance, x_instance.transpose(1, 2)).div(H * W)
+        coef = self.fc(covar_x_instance.view(N, -1)).view(N, C, 1, 1)
+        x_matix =  X * coef.expand_as(X)
+
+
+        x_weight = torch.sigmoid(self.x_weight)
+        return x_weight * x_matix + (1 - x_weight) * xin
+
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
@@ -323,6 +359,140 @@ class COVARLayer_2(nn.Module):
         x_matix = torch.bmm(coef, x.view(N, C//self.reduction, -1))
         return x_matix.view(N, C, H, W)
 
+class COVARLayer_3(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(COVARLayer_3, self).__init__()
+        self.reduction = reduction
+        assert channel % reduction == 0
+
+        self.fc_in = nn.Sequential(
+            nn.Conv1d(channel, channel // reduction, 1, 1, 0, bias=True),
+            nn.ReLU(True),
+            nn.Conv1d(channel // reduction, channel, 1, 1, 0, bias=True),
+        )
+
+        # self.fc_out = nn.Sequential(
+        #     nn.Conv1d(channel, channel // reduction, 1, 1, 0, bias=True),
+        #     nn.ReLU(True),
+        #     nn.Conv1d(channel // reduction, channel, 1, 1, 0, bias=True),
+        # )
+
+    def forward(self, x):
+        N, C, H, W = x.size() # N, C, H, W
+        x_in = self.fc_in(x.view(N, C, -1)) # N, C, H*W
+
+        # compute the instance covariance
+        x_instance = x_in.view(N, C//self.reduction, -1) # N, C//reduce, H*W*reduce
+        avg_x_instance = x_instance.mean(-1, keepdim=True) # N, C//reduce, H*W*reduce
+        sub_mean_x_instance = x_instance - avg_x_instance # N, C//reduce, H*W*reduce
+        covar_x_instance = torch.bmm(sub_mean_x_instance, sub_mean_x_instance.transpose(1, 2)).div(H * W) # N, C//reduce, C//reduce
+        covar_x_instance = nn.functional.softmax(covar_x_instance, dim=1) # N, C//reduce, C//reduce
+        x_instance = torch.bmm(covar_x_instance, x_instance).view(N, C, H, W) # N, C, H, W
+        return nn.functional.relu(x + x_instance) # N, C, H, W
+
+class COVARLayer_4(nn.Module):
+    def __init__(self, channel, resolution , resolution_reduction = 8, reduction=16):
+        super(COVARLayer_4, self).__init__()
+        self.reduction = reduction
+        assert channel % reduction == 0
+
+        self.fc_in = nn.Sequential(
+            nn.Conv1d(resolution, resolution // resolution_reduction, 1, 1, 0, bias=True),
+            nn.ReLU(True),
+            nn.Conv1d(resolution // resolution_reduction, resolution, 1, 1, 0, bias=True),
+        )
+
+        # self.fc_out = nn.Sequential(
+        #     nn.Conv1d(channel, channel // reduction, 1, 1, 0, bias=True),
+        #     nn.ReLU(True),
+        #     nn.Conv1d(channel // reduction, channel, 1, 1, 0, bias=True),
+        # )
+
+    def forward(self, x):
+        N, C, H, W = x.size() # N, C, H, W
+        x_in = self.fc_in(x.view(N, C, -1).permute(0, 2, 1).contiguous()).permute(0, 2, 1).contiguous() # N, C, H*W
+
+        # compute the instance covariance
+        x_instance = x_in.view(N, C//self.reduction, -1) # N, C//reduce, H*W*reduce
+        avg_x_instance = x_instance.mean(-1, keepdim=True) # N, C//reduce, H*W*reduce
+        sub_mean_x_instance = x_instance - avg_x_instance # N, C//reduce, H*W*reduce
+        covar_x_instance = torch.bmm(sub_mean_x_instance, sub_mean_x_instance.transpose(1, 2)).div(H * W) # N, C//reduce, C//reduce
+        covar_x_instance = nn.functional.softmax(covar_x_instance, dim=1) # N, C//reduce, C//reduce
+        x_instance = torch.bmm(covar_x_instance, x_instance).view(N, C, H, W) # N, C, H, W
+        return nn.functional.relu(x + x_instance) # N, C, H, W
+
+class COVARLayer_5(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(COVARLayer_5, self).__init__()
+        self.reduction = reduction
+        assert channel % reduction == 0
+
+        self.fc_in = nn.Sequential(
+            nn.Conv2d(channel, channel // reduction, 1, 1, 0, bias=False),
+            nn.ReLU(True),
+            nn.Conv2d(channel // reduction, channel, 1, 1, 0, bias=False),
+        )
+
+        # self.fc_out = nn.Sequential(
+        #     nn.Conv1d(channel, channel // reduction, 1, 1, 0, bias=True),
+        #     nn.ReLU(True),
+        #     nn.Conv1d(channel // reduction, channel, 1, 1, 0, bias=True),
+        # )
+
+    def forward(self, x):
+        N, C, H, W = x.size() # N, C, H, W
+        x_in = self.fc_in(x) # N, C, H*W
+
+        # compute the instance covariance
+        x_instance = x_in.view(N, C//self.reduction, -1) # N, C//reduce, H*W*reduce
+        avg_x_instance = x_instance.mean(-1, keepdim=True) # N, C//reduce, H*W*reduce
+        sub_mean_x_instance = x_instance - avg_x_instance # N, C//reduce, H*W*reduce
+        covar_x_instance = torch.bmm(sub_mean_x_instance, sub_mean_x_instance.transpose(1, 2)).div(H * W) # N, C//reduce, C//reduce
+        covar_x_instance = nn.functional.softmax(covar_x_instance, dim=1) # N, C//reduce, C//reduce
+        x_instance = torch.bmm(covar_x_instance, x_instance).view(N, C, H, W) # N, C, H, W
+        return nn.functional.relu(x + x_instance) # N, C, H, W
+
+class COVARLayer_6(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(COVARLayer_6, self).__init__()
+        self.reduction = reduction
+        assert channel % reduction == 0
+
+        self.fc_in = nn.Sequential(
+            nn.Conv2d(channel, channel // reduction, 1, 1, 0, bias=False),
+            nn.ReLU(True),
+            nn.Conv2d(channel // reduction, channel, 1, 1, 0, bias=False),
+        )
+
+        self.fc_se = nn.Sequential(
+            nn.ReLU(True),
+            nn.Linear(channel // reduction, channel, bias=False),
+            nn.Sigmoid()
+        )
+        # self.fc_out = nn.Sequential(
+        #     nn.Conv1d(channel, channel // reduction, 1, 1, 0, bias=True),
+        #     nn.ReLU(True),
+        #     nn.Conv1d(channel // reduction, channel, 1, 1, 0, bias=True),
+        # )
+
+    def forward(self, x):
+        N, C, H, W = x.size() # N, C, H, W
+        x_in = self.fc_in(x) # N, C, H*W
+
+        # compute the instance covariance
+        x_instance = x_in.view(N, C//self.reduction, -1) # N, C//reduce, H*W*reduce
+        avg_x_instance = x_instance.mean(-1, keepdim=True) # N, C//reduce, H*W*reduce
+        avg_x_instance_reduce_dim = x_instance.mean(-1, keepdim=False) # N, C//reduce
+
+        coeff = self.fc_se(avg_x_instance_reduce_dim).view(N, C, 1, 1)
+
+        sub_mean_x_instance = x_instance - avg_x_instance # N, C//reduce, H*W*reduce
+        covar_x_instance = torch.bmm(sub_mean_x_instance, sub_mean_x_instance.transpose(1, 2)).div(H * W) # N, C//reduce, C//reduce
+        covar_x_instance = nn.functional.softmax(covar_x_instance, dim=1) # N, C//reduce, C//reduce
+        x_instance = torch.bmm(covar_x_instance, x_instance).view(N, C, H, W) # N, C, H, W
+        return nn.functional.relu(x * coeff.expand_as(x) + x_instance) # N, C, H, W
+
+
 class BasicBlock(nn.Module):
     expansion = 1
 
@@ -397,8 +567,9 @@ class Bottleneck(nn.Module):
 
 class NasHighResolutionModule(nn.Module):
     def __init__(self, num_branches, blocks, num_blocks, num_inchannels,
-                 num_channels, fuse_method, nas_method, multi_scale_output=True):
+                 num_channels, fuse_method, nas_method, heatmap_resolution, multi_scale_output=True):
         super(NasHighResolutionModule, self).__init__()
+        self.heatmap_resolution = heatmap_resolution
         self._check_branches(
             num_branches, blocks, num_blocks, num_inchannels, num_channels)
 
@@ -565,11 +736,13 @@ class NasHighResolutionModule(nn.Module):
         num_inchannels = self.num_inchannels
         covar_layers = []
         for i in range(num_branches if self.multi_scale_output else 1):
+            assert self.heatmap_resolution % pow(4, i) == 0
             covar_layers.append(
                 nn.Sequential(
                     # CE(num_branches * num_inchannels[i], pooling=False, num_channels=16),
-                    # COVARLayer_1(num_branches * num_inchannels[i])
-                    CE_2(num_branches * num_inchannels[i])
+                    # COVARLayer_4(num_branches * num_inchannels[i], int(self.heatmap_resolution / pow(4,i)))
+                    # CE_3(num_branches * num_inchannels[i])
+                    COVARLayer_5(num_branches * num_inchannels[i])
                 )
             )
         return nn.ModuleList(covar_layers)
@@ -614,6 +787,9 @@ class PoseHighResolutionNet(nn.Module):
         # the network search method
         nas_method = cfg.MODEL.NAS_METHOD
 
+        # resolution
+        heatmap_resolution = cfg['MODEL']['HEATMAP_SIZE'][0] * cfg['MODEL']['HEATMAP_SIZE'][1]
+
         # stem net
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1,
                                bias=False)
@@ -632,7 +808,7 @@ class PoseHighResolutionNet(nn.Module):
         ]
         self.transition1 = self._make_transition_layer([256], num_channels)
         self.stage2, pre_stage_channels = self._make_stage(
-            self.stage2_cfg, num_channels, nas_method)
+            self.stage2_cfg, num_channels, nas_method, heatmap_resolution)
 
         self.stage3_cfg = cfg['MODEL']['EXTRA']['STAGE3']
         num_channels = self.stage3_cfg['NUM_CHANNELS']
@@ -643,7 +819,7 @@ class PoseHighResolutionNet(nn.Module):
         self.transition2 = self._make_transition_layer(
             pre_stage_channels, num_channels)
         self.stage3, pre_stage_channels = self._make_stage(
-            self.stage3_cfg, num_channels, nas_method)
+            self.stage3_cfg, num_channels, nas_method, heatmap_resolution)
 
         self.stage4_cfg = cfg['MODEL']['EXTRA']['STAGE4']
         num_channels = self.stage4_cfg['NUM_CHANNELS']
@@ -654,7 +830,7 @@ class PoseHighResolutionNet(nn.Module):
         self.transition3 = self._make_transition_layer(
             pre_stage_channels, num_channels)
         self.stage4, pre_stage_channels = self._make_stage(
-            self.stage4_cfg, num_channels, nas_method, multi_scale_output=False)
+            self.stage4_cfg, num_channels, nas_method, heatmap_resolution, multi_scale_output=False)
 
         self.final_layer = nn.Conv2d(
             in_channels=pre_stage_channels[0],
@@ -727,7 +903,7 @@ class PoseHighResolutionNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def _make_stage(self, layer_config, num_inchannels, nas_method,
+    def _make_stage(self, layer_config, num_inchannels, nas_method, heatmap_resolution,
                     multi_scale_output=True):
         num_modules = layer_config['NUM_MODULES']
         num_branches = layer_config['NUM_BRANCHES']
@@ -753,6 +929,7 @@ class PoseHighResolutionNet(nn.Module):
                     num_channels,
                     fuse_method,
                     nas_method,
+                    heatmap_resolution,
                     reset_multi_scale_output
                 )
             )
