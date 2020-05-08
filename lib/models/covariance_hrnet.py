@@ -580,6 +580,98 @@ class COVARLayer_8(nn.Module):
 
         return coeff.expand_as(x_branch_covar) * x_branch_covar
 
+class COVARLayer_9(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(COVARLayer_9, self).__init__()
+        self.reduction = reduction
+        assert channel % reduction == 0
+
+        self.x_weight = nn.Parameter(torch.zeros(1))
+
+        self.fc_in = nn.Sequential(
+            nn.Conv2d(channel, channel // reduction, 1, 1, 0, bias=False),
+            nn.ReLU(True),
+            nn.Conv2d(channel // reduction, channel, 1, 1, 0, bias=False),
+        )
+
+        self.fc_se = nn.Sequential(
+            nn.ReLU(True),
+            nn.Linear(channel // reduction, channel, bias=False),
+            nn.Sigmoid()
+        )
+        # self.fc_out = nn.Sequential(
+        #     nn.Conv1d(channel, channel // reduction, 1, 1, 0, bias=True),
+        #     nn.ReLU(True),
+        #     nn.Conv1d(channel // reduction, channel, 1, 1, 0, bias=True),
+        # )
+
+    def forward(self, x):
+        N, C, H, W = x.size() # N, C, H, W
+        x_in = self.fc_in(x) # N, C, H*W
+
+        # compute the instance covariance
+        x_instance = x_in.view(N, C//self.reduction, -1) # N, C//reduce, H*W*reduce
+        avg_x_instance = x_instance.mean(-1, keepdim=True) # N, C//reduce, H*W*reduce
+        avg_x_instance_reduce_dim = x_instance.mean(-1, keepdim=False) # N, C//reduce
+
+        coeff = self.fc_se(avg_x_instance_reduce_dim).view(N, C, 1, 1)
+        x_brach_avg = x * coeff.expand_as(x)
+
+        sub_mean_x_instance = x_instance - avg_x_instance # N, C//reduce, H*W*reduce
+        covar_x_instance = torch.bmm(sub_mean_x_instance, sub_mean_x_instance.transpose(1, 2)).div(H * W) # N, C//reduce, C//reduce
+        covar_x_instance = nn.functional.softmax(covar_x_instance, dim=1) # N, C//reduce, C//reduce
+        x_instance = torch.bmm(covar_x_instance, x_instance).view(N, C, H, W) # N, C, H, W
+        x_branch_covar = nn.functional.relu(x + x_instance) # N, C, H, W
+
+        x_weight = torch.sigmoid(self.x_weight)
+        return (1-x_weight) * x_brach_avg + x_weight * x_branch_covar
+
+class COVARLayer_10(nn.Module):
+    def __init__(self, channel, reduction=16):
+        super(COVARLayer_10, self).__init__()
+        self.reduction = reduction
+        assert channel % reduction == 0
+
+        self.x_weight = nn.Parameter(torch.zeros(1))
+
+        self.fc_in = nn.Sequential(
+            nn.Conv2d(channel, channel // reduction, 1, 1, 0, bias=False),
+            nn.ReLU(True),
+            nn.Conv2d(channel // reduction, channel, 1, 1, 0, bias=False),
+        )
+
+        self.fc_se = nn.Sequential(
+            nn.ReLU(True),
+            nn.Linear(channel // reduction, channel, bias=False),
+            nn.Sigmoid()
+        )
+        # self.fc_out = nn.Sequential(
+        #     nn.Conv1d(channel, channel // reduction, 1, 1, 0, bias=True),
+        #     nn.ReLU(True),
+        #     nn.Conv1d(channel // reduction, channel, 1, 1, 0, bias=True),
+        # )
+
+    def forward(self, x):
+        N, C, H, W = x.size() # N, C, H, W
+        x_in = self.fc_in(x) # N, C, H*W
+
+        # compute the instance covariance
+        x_instance = x_in.view(N, C//self.reduction, -1) # N, C//reduce, H*W*reduce
+        avg_x_instance = x_instance.mean(-1, keepdim=True) # N, C//reduce, H*W*reduce
+        avg_x_instance_reduce_dim = x_instance.mean(-1, keepdim=False) # N, C//reduce
+
+        coeff = self.fc_se(avg_x_instance_reduce_dim).view(N, C, 1, 1)
+        x_brach_avg = x * coeff.expand_as(x)
+
+        sub_mean_x_instance = x_instance - avg_x_instance # N, C//reduce, H*W*reduce
+        covar_x_instance = torch.bmm(sub_mean_x_instance, sub_mean_x_instance.transpose(1, 2)).div(H * W) # N, C//reduce, C//reduce
+        covar_x_instance = nn.functional.softmax(covar_x_instance, dim=1) # N, C//reduce, C//reduce
+        x_instance = torch.bmm(covar_x_instance, x_instance).view(N, C, H, W) # N, C, H, W
+        # x_branch_covar = nn.functional.relu(x + x_instance) # N, C, H, W
+
+        x_weight = torch.sigmoid(self.x_weight)
+        return nn.functional.relu((1-x_weight) * x_brach_avg + x_weight * x_instance + x)
+
 class BasicBlock(nn.Module):
     expansion = 1
 
@@ -666,7 +758,7 @@ class NasHighResolutionModule(nn.Module):
         self.num_branches = num_branches
 
         self.multi_scale_output = multi_scale_output
-        self.coeff = nn.Parameter(torch.ones(self.num_branches if self.multi_scale_output else 1, self.num_branches))
+        # self.coeff = nn.Parameter(torch.ones(self.num_branches if self.multi_scale_output else 1, self.num_branches))
         self.branches = self._make_branches(
             num_branches, blocks, num_blocks, num_channels)
         self.fuse_layers = self._make_fuse_layers()
@@ -829,7 +921,7 @@ class NasHighResolutionModule(nn.Module):
                     # CE(num_branches * num_inchannels[i], pooling=False, num_channels=16),
                     # COVARLayer_4(num_branches * num_inchannels[i], int(self.heatmap_resolution / pow(4,i)))
                     # CE_3(num_branches * num_inchannels[i])
-                    COVARLayer_7(num_branches * num_inchannels[i])
+                    COVARLayer_9(num_branches * num_inchannels[i])
                 )
             )
         return nn.ModuleList(covar_layers)
@@ -1086,6 +1178,8 @@ class PoseHighResolutionNet(nn.Module):
 
         if os.path.isfile(pretrained):
             pretrained_state_dict = torch.load(pretrained)
+            if 'epoch' in pretrained_state_dict:
+                pretrained_state_dict = pretrained_state_dict['state_dict']
             logger.info('=> loading pretrained model {}'.format(pretrained))
 
             need_init_state_dict = {}
