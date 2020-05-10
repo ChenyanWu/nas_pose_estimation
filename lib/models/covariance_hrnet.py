@@ -1123,8 +1123,8 @@ class NasHighResolutionModule(nn.Module):
             concat_x_se = x_se[:, :self.num_inchannels[i]]
             for j in range(1, self.num_branches):
                 concat_x_se += x_se[:, j * self.num_inchannels[i]: (j + 1) * self.num_inchannels[i]]
-            concat_x_se = nn.functional.relu(concat_x_se + residual)
-            # concat_x_se = concat_x_se + residual
+            # concat_x_se = nn.functional.relu(concat_x_se + residual)
+            concat_x_se = concat_x_se + residual
             x_fuse.append(concat_x_se)
 
         return x_fuse
