@@ -1590,12 +1590,16 @@ class PoseHighResolutionNet(nn.Module):
 
         if os.path.isfile(pretrained):
             pretrained_state_dict = torch.load(pretrained)
+            wenqi_flag = False
             if 'epoch' in pretrained_state_dict:
+                wenqi_flag = True
                 pretrained_state_dict = pretrained_state_dict['state_dict']
             logger.info('=> loading pretrained model {}'.format(pretrained))
 
             need_init_state_dict = {}
             for name, m in pretrained_state_dict.items():
+                if wenqi_flag:
+                    name = name[7:]
                 if name.split('.')[0] in self.pretrained_layers \
                    or self.pretrained_layers[0] is '*':
                     need_init_state_dict[name] = m
