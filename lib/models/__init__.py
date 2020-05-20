@@ -16,3 +16,7 @@ import models.pose_resnet
 import models.pose_hrnet
 import models.nas_hrnet
 import models.covariance_hrnet
+import models.covariance_hrnet_v2
+import models.covariance_hrnet_v3
+import models.covariance_hrnet_v4
+import models.covariance_hrnet_v5

@@ -24,9 +24,9 @@ DATASET:
   TRAIN_SET: train
 MODEL:
   INIT_WEIGHTS: true
-  NAME: covariance_hrnet
+  NAME: covariance_hrnet_v5
   NUM_JOINTS: 16
-  PRETRAINED: 'models/pytorch/imagenet/hrnet_79.pth'
+  PRETRAINED: 'models/pytorch/imagenet_covariance_hrnet/cohrnet_783.pth'
   TARGET_TYPE: gaussian
   IMAGE_SIZE:
   - 256

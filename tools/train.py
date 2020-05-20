@@ -206,7 +206,8 @@ def main():
             'model': cfg.MODEL.NAME,
             'state_dict': model.state_dict(),
             'best_state_dict': model.module.state_dict(),
-            'perf': perf_indicator,
+            # 'perf': perf_indicator,
+            'perf': best_perf,
             'optimizer': optimizer.state_dict(),
         }, best_model, final_output_dir)
 
