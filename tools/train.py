@@ -36,6 +36,25 @@ from utils.utils import get_model_summary
 import dataset
 import models
 
+class ColorAugmentation(object):
+    def __init__(self, eig_vec=None, eig_val=None):
+        if eig_vec == None:
+            eig_vec = torch.Tensor([
+                [0.4009, 0.7192, -0.5675],
+                [-0.8140, -0.0045, -0.5808],
+                [0.4203, -0.6948, -0.5836],
+            ])
+        if eig_val == None:
+            eig_val = torch.Tensor([[0.2175, 0.0188, 0.0045]])
+        self.eig_val = eig_val  # 1*3
+        self.eig_vec = eig_vec  # 3*3
+
+    def __call__(self, tensor):
+        assert tensor.size(0) == 3
+        alpha = torch.normal(mean=torch.zeros_like(self.eig_val)) * 0.1
+        quatity = torch.mm(self.eig_val * alpha, self.eig_vec)
+        tensor = tensor + quatity.view(3, 1, 1)
+        return tensor
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train keypoints network')
@@ -123,13 +142,23 @@ def main():
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     )
-    train_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
-        cfg, cfg.DATASET.ROOT, cfg.DATASET.TRAIN_SET, True,
-        transforms.Compose([
-            transforms.ToTensor(),
-            normalize,
-        ])
-    )
+    if cfg.DATASET.COLOR_AUG:
+        train_dataset = eval('dataset.' + cfg.DATASET.DATASET)(
+            cfg, cfg.DATASET.ROOT, cfg.DATASET.TRAIN_SET, True,
+            transforms.Compose([
+                transforms.ToTensor(),
+                ColorAugmentation(),
+                normalize,
+            ])
+        )
+    else:
+        train_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
+            cfg, cfg.DATASET.ROOT, cfg.DATASET.TRAIN_SET, True,
+            transforms.Compose([
+                transforms.ToTensor(),
+                normalize,
+            ])
+        )
     valid_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
         cfg, cfg.DATASET.ROOT, cfg.DATASET.TEST_SET, False,
         transforms.Compose([

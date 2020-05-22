@@ -24,7 +24,7 @@ def conv3x3(in_planes, out_planes, stride=1):
                      padding=1, bias=False)
 
 class COVARLayer(nn.Module):
-    def __init__(self, channel, reduction=16):
+    def __init__(self, channel, reduction=32):
         super(COVARLayer, self).__init__()
         self.reduction = reduction
         assert channel % reduction == 0
@@ -570,7 +570,7 @@ class PoseHighResolutionNet(nn.Module):
             pretrained_state_dict = torch.load(pretrained)
             wenqi_flag = False
             if 'epoch' in pretrained_state_dict:
-                # wenqi_flag = True
+                wenqi_flag = True
                 pretrained_state_dict = pretrained_state_dict['state_dict']
             logger.info('=> loading pretrained model {}'.format(pretrained))
 

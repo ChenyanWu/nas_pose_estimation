@@ -33,10 +33,8 @@ class COVARLayer(nn.Module):
 
         self.fc_in = nn.Sequential(
             nn.Conv2d(channel, channel // reduction, 1, 1, 0, bias=False),
-            nn.BatchNorm2d(channel // reduction, momentum=BN_MOMENTUM),
             nn.ReLU(True),
             nn.Conv2d(channel // reduction, channel, 1, 1, 0, bias=False),
-            nn.BatchNorm2d(channel, momentum=BN_MOMENTUM)
         )
 
         self.fc_se = nn.Sequential(
@@ -44,11 +42,15 @@ class COVARLayer(nn.Module):
             nn.Linear(channel // reduction, channel, bias=False),
             nn.Sigmoid()
         )
-
+        # self.fc_out = nn.Sequential(
+        #     nn.Conv1d(channel, channel // reduction, 1, 1, 0, bias=True),
+        #     nn.ReLU(True),
+        #     nn.Conv1d(channel // reduction, channel, 1, 1, 0, bias=True),
+        # )
 
     def forward(self, x):
         N, C, H, W = x.size() # N, C, H, W
-        x_in = self.fc_in(x) # N, C, H*W
+        x_in = self.fc_in(x) # N, C, H, W
 
         # compute the instance covariance
         x_instance = x_in.view(N, C//self.reduction, -1) # N, C//reduce, H*W*reduce
@@ -62,11 +64,10 @@ class COVARLayer(nn.Module):
         covar_x_instance = torch.bmm(sub_mean_x_instance, sub_mean_x_instance.transpose(1, 2)).div(H * W) # N, C//reduce, C//reduce
         covar_x_instance = nn.functional.softmax(covar_x_instance, dim=1) # N, C//reduce, C//reduce
         x_instance = torch.bmm(covar_x_instance, x_instance).view(N, C, H, W) # N, C, H, W
-        # x_branch_covar = nn.functional.relu(x + x_instance) # N, C, H, W
+        x_branch_covar = nn.functional.relu(x + x_instance) # N, C, H, W
 
         x_weight = torch.sigmoid(self.x_weight)
-        # return (1-x_weight) * x_brach_avg + x_weight * x_branch_covar
-        return 0.5*x_brach_avg + 0.5*x_instance + x
+        return (1-x_weight) * x_brach_avg + x_weight * x_branch_covar
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -153,7 +154,6 @@ class NasHighResolutionModule(nn.Module):
         self.num_branches = num_branches
 
         self.multi_scale_output = multi_scale_output
-        # self.coeff = nn.Parameter(torch.ones(self.num_branches if self.multi_scale_output else 1, self.num_branches))
         self.branches = self._make_branches(
             num_branches, blocks, num_blocks, num_channels)
         self.fuse_layers = self._make_fuse_layers()
@@ -252,7 +252,18 @@ class NasHighResolutionModule(nn.Module):
                         )
                     )
                 elif j == i:
+                    # fuse_layer.append(
+                    #     nn.Sequential(
+                    #         nn.Conv2d(
+                    #             num_inchannels[j],
+                    #             num_inchannels[i],
+                    #             1, 1, 0, bias=False
+                    #         ),
+                    #         nn.BatchNorm2d(num_inchannels[i])
+                    #     )
+                    # )
                     fuse_layer.append(nn.BatchNorm2d(num_inchannels[i]))
+                    # fuse_layer.append(nn.Identity())
                 else:
                     conv3x3s = []
                     for k in range(i-j):
@@ -266,6 +277,7 @@ class NasHighResolutionModule(nn.Module):
                                         3, 2, 1, bias=False
                                     ),
                                     nn.BatchNorm2d(num_outchannels_conv3x3),
+                                    # nn.ReLU(True),
                                 )
                             )
                         else:
@@ -285,7 +297,6 @@ class NasHighResolutionModule(nn.Module):
             fuse_layers.append(nn.ModuleList(fuse_layer))
 
         return nn.ModuleList(fuse_layers)
-
 
     def _make_covariance_layers(self):
         if self.num_branches == 1:
@@ -315,20 +326,16 @@ class NasHighResolutionModule(nn.Module):
 
         x_fuse = []
 
-        # add skip
         for i in range(len(self.fuse_layers)):
             concat_list = []
             for j in range(self.num_branches):
                 concat_list.append(self.fuse_layers[i][j](x[j]))
-            residual = concat_list[i]
             concat_x = torch.cat(concat_list, 1)
-            # x_se = concat_x
             x_se = self.covariance_layers[i](concat_x)
             concat_x_se = x_se[:, :self.num_inchannels[i]]
             for j in range(1, self.num_branches):
                 concat_x_se += x_se[:, j * self.num_inchannels[i]: (j + 1) * self.num_inchannels[i]]
-            concat_x_se = nn.functional.relu(concat_x_se + residual)
-            # concat_x_se = concat_x_se + residual
+            # concat_x_se = nn.functional.relu(concat_x_se)
             x_fuse.append(concat_x_se)
 
         return x_fuse
@@ -563,7 +570,7 @@ class PoseHighResolutionNet(nn.Module):
             pretrained_state_dict = torch.load(pretrained)
             wenqi_flag = False
             if 'epoch' in pretrained_state_dict:
-                # wenqi_flag = True
+                wenqi_flag = True
                 pretrained_state_dict = pretrained_state_dict['state_dict']
             logger.info('=> loading pretrained model {}'.format(pretrained))
 

@@ -1,4 +1,4 @@
-AUTO_RESUME: true
+AUTO_RESUME: false
 CUDNN:
   BENCHMARK: true
   DETERMINISTIC: false
@@ -26,7 +26,7 @@ MODEL:
   INIT_WEIGHTS: true
   NAME: covariance_hrnet_v4
   NUM_JOINTS: 17
-  PRETRAINED: 'models/pytorch/imagenet_covariance_hrnet/cohrnet_783.pth'
+  PRETRAINED: 'models/pytorch/imagenet/hrnet_79.pth'
   TARGET_TYPE: gaussian
   NAS_METHOD: mean
   IMAGE_SIZE:
@@ -95,13 +95,13 @@ TRAIN:
   BATCH_SIZE_PER_GPU: 48
   SHUFFLE: true
   BEGIN_EPOCH: 0
-  END_EPOCH: 210
+  END_EPOCH: 300
   OPTIMIZER: adam
   LR: 0.001
   LR_FACTOR: 0.1
   LR_STEP:
   - 170
-  - 200
+  - 250
   WD: 0.0001
   GAMMA1: 0.99
   GAMMA2: 0.0
