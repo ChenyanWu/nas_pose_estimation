@@ -21,3 +21,4 @@ import models.covariance_hrnet_v3
 import models.covariance_hrnet_v4
 import models.covariance_hrnet_v5
 import models.covariance_hrnet_v6
+import models.covariance_hrnet_v7

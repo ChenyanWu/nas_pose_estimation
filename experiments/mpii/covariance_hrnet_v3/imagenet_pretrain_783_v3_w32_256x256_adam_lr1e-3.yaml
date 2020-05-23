@@ -12,6 +12,7 @@ PRINT_FREQ: 100
 
 DATASET:
   COLOR_RGB: true
+  COLOR_AUG: true
   DATASET: mpii
   DATA_FORMAT: jpg
   FLIP: true
@@ -26,7 +27,7 @@ MODEL:
   INIT_WEIGHTS: true
   NAME: covariance_hrnet_v3
   NUM_JOINTS: 16
-  PRETRAINED: 'models/pytorch/imagenet_covariance_hrnet/cohrnet_783.pth'
+  PRETRAINED: 'models/pytorch/imagenet/hrnet_79.pth'
   TARGET_TYPE: gaussian
   IMAGE_SIZE:
   - 256
