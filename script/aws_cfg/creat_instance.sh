@@ -1,4 +1,8 @@
 #!/bin/bash
+#make model dir
+mkdir -p models/pytorch/imagenet
+mkdir -p models/pytorch/imagenet_covariance_hrnet
+
 #install python package
 pip install -r requirements.txt
 echo done python package install
@@ -6,9 +10,9 @@ echo done python package install
 #install coco api
 cd ..
 git clone https://github.com/cocodataset/cocoapi.git
-cd cocoapi
+cd cocoapi/PythonAPI
 make install
-cd ../nas_pose_estimation
+cd ../../nas_pose_estimation
 echo done coco api install
 
 #make lib
