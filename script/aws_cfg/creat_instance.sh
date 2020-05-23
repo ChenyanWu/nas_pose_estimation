@@ -1,4 +1,6 @@
 #!/bin/bash
+cd /home/ubuntu/nas_pose_estimation
+source activate pytorch_p36
 #make model dir
 mkdir -p models/pytorch/imagenet
 mkdir -p models/pytorch/imagenet_covariance_hrnet
