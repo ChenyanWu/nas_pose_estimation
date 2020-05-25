@@ -64,10 +64,10 @@ class COVARLayer(nn.Module):
         covar_x_instance = torch.bmm(sub_mean_x_instance, sub_mean_x_instance.transpose(1, 2)).div(H * W) # N, C//reduce, C//reduce
         covar_x_instance = nn.functional.softmax(covar_x_instance, dim=1) # N, C//reduce, C//reduce
         x_instance = torch.bmm(covar_x_instance, x_instance).view(N, C, H, W) # N, C, H, W
-        x_branch_covar = nn.functional.relu(x + x_instance) # N, C, H, W
+        # x_branch_covar = nn.functional.relu(x + x_instance) # N, C, H, W
 
         x_weight = torch.sigmoid(self.x_weight)
-        return 0.5 * x_brach_avg + 0.5 * x_branch_covar
+        return nn.functional.relu((1-x_weight) * x_brach_avg + x_weight * x_instance + x)
 
 class BasicBlock(nn.Module):
     expansion = 1
