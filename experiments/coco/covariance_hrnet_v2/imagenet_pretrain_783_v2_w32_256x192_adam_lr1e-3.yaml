@@ -11,7 +11,6 @@ WORKERS: 24
 PRINT_FREQ: 100
 
 DATASET:
-  COLOR_RGB: true
   DATASET: 'coco'
   DATA_FORMAT: jpg
   FLIP: true
@@ -23,10 +22,11 @@ DATASET:
   TEST_SET: 'val2017'
   TRAIN_SET: 'train2017'
 MODEL:
+  SYNC_BN: true
   INIT_WEIGHTS: true
   NAME: covariance_hrnet_v2
   NUM_JOINTS: 17
-  PRETRAINED: 'models/pytorch/imagenet_covariance_hrnet/cohrnet_783.pth'
+  PRETRAINED: 'models/pytorch/imagenet/hrnet_79.pth'
   TARGET_TYPE: gaussian
   NAS_METHOD: mean
   IMAGE_SIZE:

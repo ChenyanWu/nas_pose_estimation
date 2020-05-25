@@ -11,7 +11,7 @@ WORKERS: 24
 PRINT_FREQ: 100
 
 DATASET:
-  COLOR_RGB: true
+#  COLOR_RGB: true
   COLOR_AUG: true
   DATASET: mpii
   DATA_FORMAT: jpg

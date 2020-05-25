@@ -18,6 +18,12 @@ import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
+import torch.nn.parallel
+import torch.backends.cudnn as cudnn
+import torch.distributed as dist
+import torch.optim
+import torch.multiprocessing as mp
+import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 from tensorboardX import SummaryWriter
@@ -32,7 +38,7 @@ from utils.utils import get_optimizer
 from utils.utils import save_checkpoint
 from utils.utils import create_logger
 from utils.utils import get_model_summary
-from models.sync_batchnorm import convert_model
+
 import dataset
 import models
 
@@ -91,10 +97,23 @@ def parse_args():
 
     return args
 
-
 def main():
     args = parse_args()
     update_config(cfg, args)
+
+
+
+
+    # Since we have ngpus_per_node processes per node, the total world_size
+    # needs to be adjusted accordingly
+    ngpus_per_node = torch.cuda.device_count()
+    world_size = ngpus_per_node
+    # Use torch.multiprocessing.spawn to launch distributed processes: the
+    # main_worker process function
+    mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args))
+
+def main_worker(args):
+
 
     logger, final_output_dir, tb_log_dir = create_logger(
         cfg, args.cfg, 'train')
@@ -132,11 +151,6 @@ def main():
     logger.info(get_model_summary(model, dump_input))
 
     model = torch.nn.DataParallel(model, device_ids=cfg.GPUS).cuda()
-
-    if cfg.MODEL.SYNC_BN:
-        model = convert_model(model)
-
-    model = model.cuda()
 
     # define loss function (criterion) and optimizer
     criterion = JointsMSELoss(
