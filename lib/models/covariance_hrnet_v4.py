@@ -24,7 +24,7 @@ def conv3x3(in_planes, out_planes, stride=1):
                      padding=1, bias=False)
 
 class COVARLayer(nn.Module):
-    def __init__(self, channel, reduction=16):
+    def __init__(self, channel, reduction=8):
         super(COVARLayer, self).__init__()
         self.reduction = reduction
         assert channel % reduction == 0

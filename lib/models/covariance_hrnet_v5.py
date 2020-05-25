@@ -24,7 +24,7 @@ def conv3x3(in_planes, out_planes, stride=1):
                      padding=1, bias=False)
 
 class COVARLayer(nn.Module):
-    def __init__(self, channel, reduction=16):
+    def __init__(self, channel, reduction=8):
         super(COVARLayer, self).__init__()
         self.reduction = reduction
         assert channel % reduction == 0
@@ -62,9 +62,11 @@ class COVARLayer(nn.Module):
 
         sub_mean_x_instance = x_instance - avg_x_instance # N, C//reduce, H*W*reduce
         covar_x_instance = torch.bmm(sub_mean_x_instance, sub_mean_x_instance.transpose(1, 2)).div(H * W) # N, C//reduce, C//reduce
-        covar_x_instance = nn.functional.softmax(covar_x_instance, dim=1) # N, C//reduce, C//reduce
+        # covar_x_instance = nn.functional.softmax(covar_x_instance, dim=1) # N, C//reduce, C//reduce
+        mean_covar_x_instance = covar_x_instance.mean(dim=1, keepdim=True)
+        covar_x_instance = covar_x_instance / mean_covar_x_instance
         x_instance = torch.bmm(covar_x_instance, x_instance).view(N, C, H, W) # N, C, H, W
-        x_branch_covar = x + x_instance # N, C, H, W
+        x_branch_covar = nn.functional.relu(x + x_instance) # N, C, H, W
 
         x_weight = torch.sigmoid(self.x_weight)
         return (1-x_weight) * x_brach_avg + x_weight * x_branch_covar
