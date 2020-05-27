@@ -352,7 +352,8 @@ class PoseHighResolutionNet(nn.Module):
         self.inplanes = 64
         extra = cfg.MODEL.EXTRA
         super(PoseHighResolutionNet, self).__init__()
-
+        # channel
+        self.channel = cfg['MODEL']['EXTRA']['STAGE2']['NUM_CHANNELS'][0]
         # the network search method
         nas_method = cfg.MODEL.NAS_METHOD
 
@@ -570,7 +571,7 @@ class PoseHighResolutionNet(nn.Module):
             pretrained_state_dict = torch.load(pretrained)
             wenqi_flag = False
             if 'epoch' in pretrained_state_dict:
-                if cfg['MODEL']['EXTRA']['STAGE2']['NUM_CHANNELS'][0] == 32:
+                if self.channel == 32:
                     logger.info('=> Yes, use 79 model')
                     wenqi_flag = True
                 pretrained_state_dict = pretrained_state_dict['state_dict']
