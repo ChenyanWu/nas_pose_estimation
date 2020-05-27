@@ -26,7 +26,8 @@ MODEL:
   INIT_WEIGHTS: true
   NAME: covariance_hrnet_v6
   NUM_JOINTS: 17
-  PRETRAINED: 'models/pytorch/imagenet/hrnetv2_w48_imagenet_pretrained.pth'
+#  PRETRAINED: 'models/pytorch/imagenet/hrnetv2_w48_imagenet_pretrained.pth'
+  PRETRAINED: 'models/pytorch/imagenet/hrnet_w48-8ef0771d.pth'
   TARGET_TYPE: gaussian
   IMAGE_SIZE:
   - 192
