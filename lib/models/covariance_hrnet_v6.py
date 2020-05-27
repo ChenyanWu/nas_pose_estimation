@@ -570,7 +570,9 @@ class PoseHighResolutionNet(nn.Module):
             pretrained_state_dict = torch.load(pretrained)
             wenqi_flag = False
             if 'epoch' in pretrained_state_dict:
-                # wenqi_flag = True
+                if cfg['MODEL']['EXTRA']['STAGE2']['NUM_CHANNELS'][0] == 32:
+                    logger.info('=> Yes, use 79 model')
+                    wenqi_flag = True
                 pretrained_state_dict = pretrained_state_dict['state_dict']
             logger.info('=> loading pretrained model {}'.format(pretrained))
 
