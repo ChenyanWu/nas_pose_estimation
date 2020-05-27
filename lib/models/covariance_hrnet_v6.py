@@ -100,7 +100,9 @@ class COVARLayer(nn.Module):
 
         # compute the instance covariance
         x_instance = x_in.view(N, C//self.reduction, -1) # N, C//reduce, H*W*reduce
-        reduce_x_instance = self.pool(x_in) # N, C//reduce, H*W*reduce/4
+
+        reduce_x_in = self.pool(x_in) # N, C, H/2, W/2
+        reduce_x_instance = reduce_x_in.view(N, C//self.reduction, -1) # N, C//reduce, H*W*reduce/4
         avg_x_instance = reduce_x_instance.mean(-1, keepdim=True) # N, C//reduce, H*W*reduce/4
         avg_x_instance_reduce_dim = x_instance.mean(-1, keepdim=False) # N, C//reduce
 
