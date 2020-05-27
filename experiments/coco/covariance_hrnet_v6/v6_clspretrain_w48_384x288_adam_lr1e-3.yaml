@@ -24,7 +24,7 @@ DATASET:
   TRAIN_SET: 'train2017'
 MODEL:
   INIT_WEIGHTS: true
-  NAME: pose_hrnet
+  NAME: covariance_hrnet_v6
   NUM_JOINTS: 17
   PRETRAINED: 'models/pytorch/imagenet/hrnetv2_w48_imagenet_pretrained.pth'
   TARGET_TYPE: gaussian
