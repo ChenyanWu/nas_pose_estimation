@@ -120,7 +120,7 @@ def conv3x3(in_planes, out_planes, stride=1):
 #         return (1-x_weight) * x_brach_avg + x_weight * x_branch_covar
 
 class SELayer(nn.Module):
-    def __init__(self, channel, reduction=16):
+    def __init__(self, channel, reduction=8):
         super(SELayer, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
